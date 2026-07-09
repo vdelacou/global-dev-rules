@@ -21,7 +21,7 @@ UX is broad: logistics, payments, trust, and customer service, not just the inte
 
 ## Supporting values
 
-Pragmatism and speed to ship (serverless, free tiers, small scripts that get things working). Reproducibility through a portable, reused toolchain. A human-centric skepticism of hype.
+Pragmatism and speed to ship (managed, low-fixed-cost building blocks, small scripts that get things working). Reproducibility through a portable, reused toolchain. A human-centric skepticism of hype.
 
 ## The one-line version
 

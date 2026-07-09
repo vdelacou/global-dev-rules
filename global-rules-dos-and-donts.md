@@ -1326,7 +1326,7 @@ Deployment is a non-event when the pipeline is automated, changes are small and 
 **Do:** Merge small, reviewable commits into a short-lived branch off main and integrate daily.
 **Don't:** Sit on a long-lived feature branch for weeks so integration becomes one giant, unreviewable merge.
 
-Applies to any stack (git workflow):
+Stack-agnostic (git workflow):
 ```bash
 # DON'T: a long-lived branch that drifts for weeks, then a single massive PR
 git checkout -b feature/big-rewrite
@@ -1344,7 +1344,7 @@ git push --set-upstream origin add-receipt-total-field
 **Do:** Deploy only through the pipeline, roll out to a canary before full traffic, and keep rollback to a single action.
 **Don't:** Deploy by hand and treat a bad release as an emergency you fix live.
 
-Applies to any stack (GitHub Actions CI/CD):
+Stack-agnostic (GitHub Actions CI/CD):
 ```yaml
 # DON'T: a "deploy" that is a human running a script against prod with no gate or rollback
 # (there is no artifact for this: it is someone SSHing in and hoping)
@@ -1375,7 +1375,7 @@ jobs:
 **Do:** Define every resource in version-controlled files and apply it with one command.
 **Don't:** Click a resource into existence in a cloud console where its config lives only in someone's memory.
 
-Applies to any stack (OpenTofu/Terraform):
+Stack-agnostic (OpenTofu/Terraform):
 ```hcl
 # DON'T: "created by hand" in the console, no file, no history, no review
 # Bucket "receipts" was clicked into existence by an engineer in the web UI on a Tuesday.
@@ -1474,7 +1474,7 @@ UPDATE receipts SET total_cents = amount WHERE total_cents IS NULL;
 **Do:** Give each branch or load test its own isolated environment and destroy it when the work is done.
 **Don't:** Share one long-lived "staging" box where everyone's half-finished work collides.
 
-Applies to any stack (GitHub Actions + IaC, per-branch preview):
+Stack-agnostic (GitHub Actions + IaC, per-branch preview):
 ```yaml
 # DON'T: everyone deploys to a single shared staging that is always half-broken
 # (one mutable box, no isolation, no teardown: the anti-pattern)
@@ -1509,7 +1509,7 @@ Every server you patch, cert you renew by hand, and console you click in is undi
 **Do:** Use a managed database, queue, or object store so patching, backups, and failover are the provider's job.
 **Don't:** Run Postgres on a VM you own, then own its kernel updates, disk growth, and 3 a.m. failover.
 
-Applies to any stack (OpenTofu/Terraform):
+Stack-agnostic (OpenTofu/Terraform):
 ```hcl
 # DON'T: a raw VM you now have to patch, back up, monitor, and fail over yourself
 resource "compute_instance" "db_vm" {
@@ -1534,7 +1534,7 @@ resource "managed_database" "main" {
 **Do:** Ship immutable, replaceable container units and redeploy to change anything.
 **Don't:** Keep an SSH key and a bastion so you can log in and mutate a running box.
 
-Applies to any stack (Dockerfile + commentary):
+Stack-agnostic (Dockerfile + commentary):
 ```dockerfile
 # DON'T: a box you SSH into to "just fix it live"
 #   ssh -i prod.pem ubuntu@bastion   ->  edit files in place  ->  undocumented drift
@@ -1555,7 +1555,7 @@ CMD ["bun", "run", "start"]
 **Do:** Let the platform issue and renew certificates automatically for every hostname.
 **Don't:** Buy a cert, install it by hand, and put its expiry on someone's calendar.
 
-Applies to any stack (OpenTofu/Terraform):
+Stack-agnostic (OpenTofu/Terraform):
 ```hcl
 # DON'T: a manual cert that expires at 2 a.m. on a holiday because the calendar reminder was missed
 # Engineer pastes a .pem into a load balancer once a year. Miss the date -> full outage. Anti-pattern.
@@ -1575,7 +1575,7 @@ resource "lb_certificate" "app" {
 **Do:** Give humans read-only prod access and make every infra change flow through a merge.
 **Don't:** Hand engineers admin keys so they can mutate prod directly whenever they like.
 
-Applies to any stack (branch protection as code + read-only human IAM):
+Stack-agnostic (branch protection as code + read-only human IAM):
 ```hcl
 # DON'T: developers hold AdministratorAccess and change prod from their laptops
 # (broad standing write credentials on humans: the thing to remove)
@@ -1604,7 +1604,7 @@ Assume disks die, dependencies time out, and requests crash mid-flight; make fai
 **Do:** Write down an SLO with a concrete uptime goal and error-rate ceiling, and alert against it.
 **Don't:** Rely on "it feels reliable enough" with no number anyone can check.
 
-Applies to any stack (SLO as code, e.g. an alerting rule):
+Stack-agnostic (SLO as code, e.g. an alerting rule):
 ```yaml
 # DON'T: reliability is a vibe. "It's usually fine." Nothing measures it, nothing pages anyone.
 
@@ -1698,14 +1698,23 @@ TypeScript:
 async function list(page: number) {
   return db.select().from(receipts).limit(50).offset(page * 50);
 }
-// DO: keyset page on an indexed cursor; each page costs the same, no matter how deep
-//   page on a unique cursor (e.g. createdAt, id) so tied rows neither skip nor duplicate
-async function listAfter(afterCreatedAt?: string) {
+// DO: keyset page on a unique compound cursor (createdAt, id); each page costs the same, no matter how deep,
+//   and tied rows neither skip nor duplicate
+async function listAfter(cursor?: { createdAt: string; id: string }) {
+  const after = cursor
+    ? or(
+        gt(receipts.createdAt, new Date(cursor.createdAt)),
+        and(
+          eq(receipts.createdAt, new Date(cursor.createdAt)),
+          gt(receipts.id, cursor.id),
+        ),
+      )
+    : sql`true`;
   return db.select().from(receipts)
-    .where(afterCreatedAt ? gt(receipts.createdAt, new Date(afterCreatedAt)) : sql`true`)
-    .orderBy(asc(receipts.createdAt))
+    .where(after)
+    .orderBy(asc(receipts.createdAt), asc(receipts.id))
     .limit(50);
-  // the last row's createdAt becomes the next cursor; never scans from zero
+  // the last row's (createdAt, id) becomes the next cursor; never scans from zero
 }
 // for large exports, stream or cursor through the driver instead of loading every row into memory
 ```
@@ -1716,11 +1725,12 @@ Java:
 List<Receipt> list(int page) {
     return find("order by createdAt").page(Page.of(page, 50)).list();
 }
-// DO: keyset page on an indexed cursor; each page costs the same regardless of depth
-//   use a unique cursor (createdAt, id) so ties neither skip nor duplicate
-List<Receipt> listAfter(Instant cursor) {
-    return find("createdAt > ?1 order by createdAt", cursor).page(Page.of(0, 50)).list();
-    // the last row's createdAt becomes the next cursor; depth no longer costs rows
+// DO: keyset page on a unique compound cursor (createdAt, id); each page costs the same regardless of depth,
+//   and ties neither skip nor duplicate
+List<Receipt> listAfter(Instant createdAt, UUID id) {
+    return find("createdAt > ?1 OR (createdAt = ?1 AND id > ?2) ORDER BY createdAt, id", createdAt, id)
+        .page(Page.of(0, 50)).list();
+    // the last row's (createdAt, id) becomes the next cursor; depth no longer costs rows
 }
 // stream large exports instead of holding the whole table in the heap
 try (var stream = find("order by createdAt").stream()) {
@@ -1763,7 +1773,7 @@ public void createReceipt(Receipt receipt) {
 **Do:** Run a scheduled drill that restores the backup into a scratch database and times it.
 **Don't:** Trust a backup you have never restored and assume it works.
 
-Applies to any stack (scheduled restore drill in CI):
+Stack-agnostic (scheduled restore drill in CI):
 ```yaml
 # DON'T: nightly dumps pile up in a bucket, never once restored. On disaster day you learn they were empty.
 
@@ -1830,7 +1840,7 @@ public class MeResource {
 **Do:** Set a p99 latency budget and prove it with a load test in the pipeline before shipping.
 **Don't:** Ship the endpoint and find out about the p99 from angry users in production.
 
-Applies to any stack (load test gate in CI, e.g. k6):
+Stack-agnostic (load test gate in CI, e.g. k6):
 ```yaml
 # DON'T: no load test. "It was fast on my laptop with one request." Production p99 is a surprise.
 
@@ -1889,7 +1899,7 @@ Java:
 **Do:** Run a blameless postmortem after every incident that ends in concrete backlog items with owners.
 **Don't:** Close the incident ticket the moment service is restored and move on.
 
-Applies to any stack (postmortem template as a committed file):
+Stack-agnostic (postmortem template as a committed file):
 ```markdown
 <!-- DON'T: incident resolved, ticket closed, root cause never written down, same outage recurs next quarter -->
 
@@ -1990,7 +2000,7 @@ Timer.builder("checkout.latency")
 **Do:** Alert on error rate and p95/p99 latency crossing a user-visible budget, page only when a human must act, and retire any alert that pages twice without prompting a fix; after an incident slips through, fix what broke, not just the alert that missed it.
 **Don't:** Wire noisy static-threshold alerts that fire nightly and train everyone to ignore the pager, or leave a useless alert standing because no one owns removing it.
 
-TypeScript (stack-agnostic alert rule, Prometheus style):
+Stack-agnostic (Prometheus-style alert rule):
 ```yaml
 # DON'T: raw CPU threshold, no user meaning, fires on every batch job and gets muted
 # - alert: HighCpu
