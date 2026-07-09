@@ -1,0 +1,203 @@
+{
+  "main": {
+    "id": "3af26c142442b996",
+    "type": "split",
+    "children": [
+      {
+        "id": "68944334d2fbb513",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "bf35692762e85f15",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "medium-series/03-clean-boundaries.md",
+                "mode": "preview",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "03-clean-boundaries"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "35dd550a81f5cd1a",
+    "type": "split",
+    "children": [
+      {
+        "id": "3bf957d47bf0acde",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4417eba8f71adf78",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "df5add61ceb6dc63",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "f26ca646b8dcf579",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "7f6c379cc9399219",
+    "type": "split",
+    "children": [
+      {
+        "id": "adff34ad65748001",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "c0d5e54e6694445a",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "medium-series/03-clean-boundaries.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for 03-clean-boundaries"
+            }
+          },
+          {
+            "id": "a3731f4bc3e29541",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "medium-series/03-clean-boundaries.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from 03-clean-boundaries"
+            }
+          },
+          {
+            "id": "df37aee3ecf51a2c",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "4ae434eaf235fa6b",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "2f80bf9a0ff9349f",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "medium-series/03-clean-boundaries.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of 03-clean-boundaries"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "bf35692762e85f15",
+  "lastOpenFiles": [
+    "global-rules-dos-and-donts.md.tmp.33896.4a2dbb111757",
+    "global-rules-dos-and-donts.md.tmp.33896.f421eafa3c0f",
+    "core-values-one-pager.md.tmp.33896.8420ae8d65c4",
+    "global-rules-every-new-project.md.tmp.33896.d40018c86a69",
+    "global-rules-dos-and-donts.md.tmp.33896.08d321f9352b",
+    "global-rules-dos-and-donts.md.tmp.33896.88a57c6276b2",
+    "global-rules-dos-and-donts.md.tmp.33896.2532648f9417",
+    "global-rules-dos-and-donts.md.tmp.33896.6fb0d4b7e68e",
+    "global-rules-dos-and-donts.md.tmp.33896.c4cf12bc436b",
+    "global-rules-dos-and-donts.md.tmp.33896.d061069b44d7",
+    "medium-series/03-clean-boundaries.md.tmp.33896.4cf7612c2349",
+    "global-rules-every-new-project.md",
+    "global-rules-dos-and-donts.md",
+    "core-values-one-pager.md"
+  ]
+}

@@ -75,7 +75,7 @@ Draw the boundaries on purpose:
 
 ▸ business logic depends on nothing outside it
 ▸ every external thing sits behind a port, with a real version and a fake
-▸ one API serves every client: web, iOS, Android, and now AI agents. Not one endpoint per screen
+▸ one API serves every client: web, iOS, Android, and third-party integrations. Not one endpoint per screen
 ▸ the API shape is an input for your model, not your model
 ▸ your domain is not your database schema
 

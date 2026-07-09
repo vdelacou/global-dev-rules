@@ -120,7 +120,7 @@ function Total({ total }: { total: number }) { return <div className="total">{to
 
 ## Keep the backend a client-agnostic API
 
-Expose one resource-shaped API that every client consumes the same way: web, iOS, Android, a third-party integration, an AI agent. Not endpoints shaped to a single screen.
+Expose one resource-shaped API that every client consumes the same way: web, iOS, Android, a third-party integration. Not endpoints shaped to a single screen.
 
 This is the boundary most backends get wrong, and the cost shows up later. A screen-shaped endpoint recouples the backend to one interface. It has to change every time that screen does, and it is useless to the next client, which has a different screen. A resource-shaped API lets any client compose what it needs from what already exists.
 
@@ -133,7 +133,7 @@ app.get('/orders', (c) => c.json(listOrders(c.get('userId'))));
 app.get('/promotions', (c) => c.json(listActivePromotions()));
 ```
 
-When the mobile team redesigns the home screen, the first version forces a backend change and a deploy. The second does not: the app recomposes `/orders` and `/promotions` however it likes, and a brand-new AI agent client hits the exact same endpoints without anyone building it a bespoke one. Design the API around the nouns of your domain, not the layout of today's screen.
+When the mobile team redesigns the home screen, the first version forces a backend change and a deploy. The second does not: the app recomposes `/orders` and `/promotions` however it likes, and a brand-new client hits the exact same endpoints without anyone building it a bespoke one. Design the API around the nouns of your domain, not the layout of today's screen.
 
 ## Build the frontend against a contract, not a running backend
 

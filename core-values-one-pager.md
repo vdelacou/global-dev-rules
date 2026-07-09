@@ -8,7 +8,7 @@ A synthesis of 22 articles. The through-line: decide how you build before what y
 The loudest, most repeated theme. "Production-ready" means the pipeline blocks bad code automatically: linters, formatters, strict type checks, pre-commit hooks, and scanners. Commit the lockfile, pin tool versions, fail fast. I don't trust discipline; I trust the gate.
 
 **2. Protect the system and the user by default.**
-Security and privacy are reflexes, not phases. No hardcoded secrets, dependency and secret scanning, env-var discipline, and protection extended to people's data and access: data minimization and consent, and accessibility as basic usability rather than a favor.
+Security and privacy are reflexes, not phases. No hardcoded secrets, dependency and secret scanning, env-var discipline, and protection extended to people's data and access: data minimization and consent.
 
 **3. Efficiency and correctness at scale.**
 I reach for the solution that stays fast as data grows, not the easy one: keyset over OFFSET pagination, native bulk streaming, lean functions with no bloat, edge deploys, autoscaling. Minimalism is a value, not an accident.
@@ -21,7 +21,7 @@ UX is broad: logistics, payments, trust, and customer service, not just the inte
 
 ## Supporting values
 
-Pragmatism and speed to ship (serverless, free tiers, small scripts that get things working). Reproducibility through a portable, reused toolchain. A human-centric skepticism of hype, including the belief that AI raises productivity but not creativity.
+Pragmatism and speed to ship (serverless, free tiers, small scripts that get things working). Reproducibility through a portable, reused toolchain. A human-centric skepticism of hype.
 
 ## The one-line version
 
@@ -29,4 +29,9 @@ I build for people, protect their data by default, and make quality something th
 
 ---
 
-*Basis: 22 published articles (2018 to 2025) spanning engineering practice, infrastructure, data, privacy, accessibility, and China-versus-West product and UX.*
+*Basis: 22 published articles (2018 to 2025) spanning engineering practice, infrastructure, data, privacy, and China-versus-West product and UX.*
+
+## See also
+
+- [The Global Rules Every New Project Should Have](global-rules-every-new-project.md) — the eighteen pillars that put these values to work.
+- [The Global Rules: Do and Don't, with Examples](global-rules-dos-and-donts.md) — a Do/Don't with code for every sub-concept.

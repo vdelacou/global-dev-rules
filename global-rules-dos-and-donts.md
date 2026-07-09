@@ -1,8 +1,43 @@
 # The Global Rules: Do and Don't, with Examples
 
-A companion to "The Global Rules Every New Project Should Have." For each of the eighteen pillars, every sub-concept below gives a clear Do and Don't with short, contrasting code examples in TypeScript (Bun on the backend, React on the frontend) and Java (Quarkus). Where a principle is not application code (infrastructure, delivery, ownership, metrics, product), the example is the real artifact instead: a config file, a CI step, an infrastructure block, or a command, with the tool named and explained in comments.
+A companion to [The Global Rules Every New Project Should Have](global-rules-every-new-project.md). For each of the eighteen pillars, every sub-concept below gives a clear Do and Don't with short, contrasting code examples in TypeScript (Bun on the backend, React on the frontend) and Java (Quarkus). Where a principle is not application code (infrastructure, delivery, ownership, metrics, product), the example is the real artifact instead: a config file, a CI step, an infrastructure block, or a command, with the tool named and explained in comments.
 
-Errors are modeled as values throughout: in TypeScript as a Result union, in Java as a native sealed Result type.
+Errors are modeled as values throughout: in TypeScript as a Result union, in Java as a native sealed Result type. Every example below assumes these two shapes:
+
+```ts
+type Result<T, E = string> =
+  | { ok: true; value: T }
+  | { ok: false; error: E };
+```
+
+```java
+sealed interface Result<T> permits Ok, Err {}
+record Ok<T>(T value) implements Result<T> {}
+record Err<T>(String error) implements Result<T> {}
+```
+
+---
+
+## Contents
+
+1. [Pillar 1: Consistency](#pillar-1-consistency)
+2. [Pillar 2: Simplicity by default](#pillar-2-simplicity-by-default)
+3. [Pillar 3: Keep clean boundaries](#pillar-3-keep-clean-boundaries)
+4. [Pillar 4: Proof over hope](#pillar-4-proof-over-hope)
+5. [Pillar 5: Secure by default](#pillar-5-secure-by-default)
+6. [Pillar 6: Private by default](#pillar-6-private-by-default)
+7. [Pillar 7: Isolate by default](#pillar-7-isolate-by-default)
+8. [Pillar 8: Delivery should be boring](#pillar-8-delivery-should-be-boring)
+9. [Pillar 9: Run as little as possible yourself](#pillar-9-run-as-little-as-possible-yourself)
+10. [Pillar 10: Design for failure](#pillar-10-design-for-failure)
+11. [Pillar 11: Make it observable](#pillar-11-make-it-observable)
+12. [Pillar 12: No black boxes](#pillar-12-no-black-boxes)
+13. [Pillar 13: Clear ownership](#pillar-13-clear-ownership)
+14. [Pillar 14: Pave the road](#pillar-14-pave-the-road)
+15. [Pillar 15: Enforce and verify](#pillar-15-enforce-and-verify)
+16. [Pillar 16: Measure whether you are improving](#pillar-16-measure-whether-you-are-improving)
+17. [Pillar 17: Obsess over the whole experience](#pillar-17-obsess-over-the-whole-experience)
+18. [Pillar 18: Validate before you build](#pillar-18-validate-before-you-build)
 
 ---
 
@@ -351,7 +386,7 @@ final class Pricing {
 ```
 
 ### 3.5 The backend is a client-agnostic API
-**Do:** Expose one resource-shaped API that every client (web, iOS, Android, third-party integrations, and AI agents) consumes the same way.
+**Do:** Expose one resource-shaped API that every client (web, iOS, Android, third-party integrations) consumes the same way.
 **Don't:** Shape endpoints to a single screen, so a new screen or a new client forces a new backend endpoint.
 
 TypeScript:
@@ -359,7 +394,7 @@ TypeScript:
 // DON'T: one endpoint per screen; the backend now knows the mobile home layout
 app.get('/mobile-home-screen', (c) =>
   c.json({ banner, greeting, recentOrders, promoWidget }));
-// DO: stable resource endpoints; each client (web, iOS, Android, an AI agent) composes its own screen
+// DO: stable resource endpoints; each client (web, iOS, Android) composes its own screen
 app.get('/orders', (c) => c.json(listOrders(c.get('userId'))));
 app.get('/promotions', (c) => c.json(listActivePromotions()));
 ```
@@ -2525,7 +2560,6 @@ The product is the entire journey the person lives through, so treat error copy,
 **Don't:** Surface a raw status code or stack trace and leave the user stranded.
 
 TypeScript (React):
-
 ```tsx
 // DON'T: dumps the transport failure at the person, who can do nothing with it
 function Error({ status }: { status: number }) {
@@ -2534,7 +2568,7 @@ function Error({ status }: { status: number }) {
 // DO: name the cause and the next step, in the app's voice; string comes from the catalog
 function ReceiptTooLarge({ t }: { t: Translate }) {
   return (
-    <Callout tone="pending">
+    <Callout tone="warning">
       {/* t("receipt.tooLarge") => "This photo is over 10 MB. Retake it or shrink it." */}
       {t("receipt.tooLarge")}
     </Callout>
@@ -2593,7 +2627,6 @@ analytics.track("capture_started", { orgId: ctx.orgId, variant: useNewCapture ? 
 **Don't:** Trap the user in a bot with no way to reach a person.
 
 TypeScript (React):
-
 ```tsx
 // DON'T: a bot that loops and offers no exit is a dead end, not support
 function Help() {
@@ -2606,7 +2639,7 @@ function Help({ t }: { t: Translate }) {
       <Bot fallback={null} />
       {/* always rendered, never hidden behind N failed bot turns */}
       <ContactHuman href="mailto:support@kuitto.example">
-        {t("help.talkToSomeone") /* "Parler a quelqu'un" */}
+        {t("help.talkToSomeone") /* "Talk to someone" */}
       </ContactHuman>
     </>
   );
@@ -2646,8 +2679,8 @@ Proposed tools: a static landing page (any host) with a form wired to an email-c
 <!-- landing/index.html -- DON'T: skip straight to a 3-month build to test demand -->
 <!-- DO: measure intent for the price of a page; a signup is a vote with an email -->
 <form onsubmit="capture(event)">
-  <input name="email" type="email" required placeholder="Votre e-mail" />
-  <button>Etre prevenu au lancement</button>
+  <input name="email" type="email" required placeholder="Your email" />
+  <button>Notify me at launch</button>
 </form>
 <script>
   function capture(e) {
@@ -2697,4 +2730,8 @@ if (flags.isEnabled("capture-prefill-v2", { orgId })) {
 //   adoption(prefill_used, last=28d) < 0.05  =>  disable the flag, write the reason,
 //   remove the code. no silent zombie features left half-live in the product.
 ```
+
+---
+
+*Eighteen pillars, each with its Do and Don't — the stack is a detail; these are not. See [The Global Rules Every New Project Should Have](global-rules-every-new-project.md) for the prose, and [Core Values: what my writing says I stand for](core-values-one-pager.md) for the five values they serve.*
 
