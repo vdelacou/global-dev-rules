@@ -351,41 +351,7 @@ Java:
 // Frontend-only concept: no Java counterpart.
 ```
 
-### 3.4 Make the boundary testable
-**Do:** Arrange things so a business-rule change touches the domain and never a UI or adapter.
-**Don't:** Spread one rule across a component and an adapter so any change edits both.
-
-TypeScript:
-```ts
-// DON'T: the tax rule lives in the React component, so a rate change edits the UI
-function Total({ items }: { items: Item[] }) {
-  const net = items.reduce((s, i) => s + i.price, 0);
-  const total = net * 1.2; // VAT rule stranded in presentation
-  return <div className="total">{total}</div>;
-}
-// DO: the rule sits in the domain, the component only renders the computed value
-// core/pricing.ts
-export const withVat = (net: number): number => net * VAT_RATE;
-function Total({ total }: { total: number }) { return <div className="total">{total}</div>; }
-```
-
-Java:
-```java
-// DON'T: the rule is entangled with the JPA adapter, changing it edits persistence code
-@ApplicationScoped class InvoiceRepo {
-  BigDecimal total(UUID id) {
-    var net = find(id).net();
-    return net.multiply(new BigDecimal("1.20")); // VAT rule buried in the adapter
-  }
-}
-// DO: the rule is pure domain, the adapter only fetches, swapping storage never touches it
-final class Pricing {
-  static BigDecimal withVat(BigDecimal net) { return net.multiply(VAT_RATE); }
-}
-// InvoiceRepo returns the entity, the caller applies Pricing.withVat
-```
-
-### 3.5 The backend is a client-agnostic API
+### 3.4 The backend is a client-agnostic API
 **Do:** Expose one resource-shaped API that every client (web, iOS, Android, third-party integrations) consumes the same way.
 **Don't:** Shape endpoints to a single screen, so a new screen or a new client forces a new backend endpoint.
 
@@ -409,7 +375,7 @@ public HomeScreenDto home() { return buildHomeScreen(userId); }
 @GET @Path("/promotions") public List<Promotion> promotions() { return promotions.active(); }
 ```
 
-### 3.6 Build the frontend against a contract, not a running backend
+### 3.5 Build the frontend against a contract, not a running backend
 **Do:** Put the frontend's data access behind an interface with a real API client and an in-memory fake, so the UI is built and tested in parallel with the backend.
 **Don't:** Call fetch or an HTTP client straight from components, so nothing works until the backend is deployed.
 
@@ -423,9 +389,10 @@ function Orders() {
 }
 
 // DO: components depend on an OrderGateway interface; swap real and fake by config
-type OrderGateway = { list: () => Promise<Order[]> };
-const httpOrders: OrderGateway = { list: () => api.get('/orders') };
-const fakeOrders: OrderGateway = { list: async () => [{ id: '1', total: 80 }] }; // canned data in the contract's shape
+// the gateway returns a Result, so a failure is a value the UI can render, not a throw that blanks the screen (see 10.2)
+type OrderGateway = { list: () => Promise<Result<Order[], LoadError>> };
+const httpOrders: OrderGateway = { list: () => api.get('/orders') }; // api.get already returns Result<Order[], LoadError>
+const fakeOrders: OrderGateway = { list: async () => ({ ok: true, value: [{ id: '1', total: 80 }] }) }; // canned data in the contract's shape
 // one wiring point picks the implementation from an env flag; UI code never changes
 export const orderGateway: OrderGateway = env.USE_FAKE_API ? fakeOrders : httpOrders;
 ```
@@ -438,7 +405,7 @@ contract, not to each other's calendars. When the real endpoint lands, only the 
 flips from fake to real, and no UI code changes.
 ```
 
-### 3.7 The internal model is yours, not the API's shape
+### 3.6 The internal model is yours, not the API's shape
 **Do:** Translate the API response into your own model at the boundary, and let the two shapes differ.
 **Don't:** Pass raw API DTOs through the app, so every field the API renames breaks code everywhere.
 
@@ -457,7 +424,13 @@ const toOrder = (d: ApiOrder): Order => ({                         // the one ma
   customerName: d.customer.first_name ?? 'Guest',
 });
 // components use Order; if the API renames a field, only toOrder changes
-const httpOrders: OrderGateway = { list: async () => (await api.get<ApiOrder[]>('/orders')).map(toOrder) };
+const httpOrders: OrderGateway = {
+  list: async () => {
+    const dto = await api.get<ApiOrder[]>('/orders');           // Result<ApiOrder[], LoadError>
+    if (!dto.ok) return dto;                                     // failure propagates with the same error
+    return { ok: true, value: dto.value.map(toOrder) };          // success maps the DTO into the internal model
+  },
+};
 ```
 
 Java (Quarkus):
@@ -472,7 +445,7 @@ Java (Quarkus):
 // OrderResponse is shaped for the API; the domain Order stays internal, DTOs never enter use-cases
 ```
 
-### 3.8 The domain model is not the database model
+### 3.7 The domain model is not the database model
 **Do:** Model the business in the domain and storage in the database, and map between them at the repository.
 **Don't:** Let the ORM entity or table shape be your domain object, so persistence concerns dictate business behavior.
 
@@ -504,6 +477,40 @@ public record Order(OrderId id, List<Line> lines, OrderStatus status) {
   public boolean canRefund() { return status == OrderStatus.PAID && !lines.isEmpty(); }
 }
 // OrderRepository loads the @Entity and returns the domain Order; the entity stays inside infra
+```
+
+### 3.8 Make the boundary testable
+**Do:** Arrange things so a business-rule change touches the domain and never a UI or adapter.
+**Don't:** Spread one rule across a component and an adapter so any change edits both.
+
+TypeScript:
+```ts
+// DON'T: the tax rule lives in the React component, so a rate change edits the UI
+function Total({ items }: { items: Item[] }) {
+  const net = items.reduce((s, i) => s + i.price, 0);
+  const total = net * 1.2; // VAT rule stranded in presentation
+  return <div className="total">{total}</div>;
+}
+// DO: the rule sits in the domain, the component only renders the computed value
+// core/pricing.ts
+export const withVat = (net: number): number => net * VAT_RATE;
+function Total({ total }: { total: number }) { return <div className="total">{total}</div>; }
+```
+
+Java:
+```java
+// DON'T: the rule is entangled with the JPA adapter, changing it edits persistence code
+@ApplicationScoped class InvoiceRepo {
+  BigDecimal total(UUID id) {
+    var net = find(id).net();
+    return net.multiply(new BigDecimal("1.20")); // VAT rule buried in the adapter
+  }
+}
+// DO: the rule is pure domain, the adapter only fetches, swapping storage never touches it
+final class Pricing {
+  static BigDecimal withVat(BigDecimal net) { return net.multiply(VAT_RATE); }
+}
+// InvoiceRepo returns the entity, the caller applies Pricing.withVat
 ```
 
 ## Pillar 4: Proof over hope
@@ -892,9 +899,19 @@ resource "scaleway_rdb_instance" "db" {
 Security-group rule (the same idea at the firewall):
 ```hcl
 # DON'T: Postgres port open to the world
-ingress { from_port = 5432, to_port = 5432, protocol = "tcp", cidr_blocks = ["0.0.0.0/0"] }
+ingress {
+  from_port = 5432
+  to_port   = 5432
+  protocol  = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
 # DO: only the app subnet may reach the database port
-ingress { from_port = 5432, to_port = 5432, protocol = "tcp", cidr_blocks = ["10.0.1.0/24"] }
+ingress {
+  from_port   = 5432
+  to_port     = 5432
+  protocol    = "tcp"
+  cidr_blocks = ["10.0.1.0/24"]
+}
 ```
 
 ### 5.7 One security baseline everywhere
@@ -1180,7 +1197,7 @@ TypeScript:
 const rows = await db.select().from(invoices).where(eq(invoices.orgId, orgId));
 // DO: filter in code AND set the tenant in a session var that RLS enforces, inside one transaction
 const rows = await db.transaction(async (tx) => {
-  await tx.execute(sql`set local app.current_org = ${orgId}`); // scoped to this tx, read by the RLS policy
+  await tx.execute(sql`SELECT set_config('app.current_org', ${orgId}, true)`); // true => tx-local, read by the RLS policy
   return tx.select().from(invoices).where(eq(invoices.orgId, orgId));
 });
 // migration: CREATE POLICY tenant_isolation ON invoices
@@ -1193,7 +1210,7 @@ Java:
 return em.createQuery("select i from Invoice i where i.orgId = :o", Invoice.class)
          .setParameter("o", orgId).getResultList();
 // DO: app filter plus a database RLS policy scoped by a session setting
-em.createNativeQuery("set app.current_org = :o").setParameter("o", orgId).executeUpdate();
+em.createNativeQuery("SELECT set_config('app.current_org', :o, true)").setParameter("o", orgId).getSingleResult(); // tx-scoped: same @Transactional block as the read below
 return Invoice.list("orgId", orgId); // RLS policy on invoices re-checks org_id
 // V5__rls.sql: CREATE POLICY tenant_isolation ON invoices
 //   USING (org_id = current_setting('app.current_org')::uuid);
@@ -1658,7 +1675,45 @@ List<ReceiptSummary> summaries = getEntityManager().createNativeQuery("""
 newReceipt.persist();   // write path stays with Hibernate/Panache
 ```
 
-### 10.4 Do not fire and forget
+### 10.4 Keep reads fast as the table grows
+**Do:** Page with a stable cursor (keyset) and stream or bulk-load large result sets, so a query that is fast at ten thousand rows stays fast at ten million.
+**Don't:** Page with OFFSET, which scans and discards ever more rows the deeper you page.
+
+TypeScript:
+```ts
+// DON'T: OFFSET paging re-reads from row zero on every page; page 1000 does 1000x the work
+async function list(page: number) {
+  return db.select().from(receipts).limit(50).offset(page * 50);
+}
+// DO: keyset page on an indexed cursor; each page costs the same, no matter how deep
+async function listAfter(afterCreatedAt?: string) {
+  return db.select().from(receipts)
+    .where(afterCreatedAt ? gt(receipts.createdAt, new Date(afterCreatedAt)) : sql`true`)
+    .orderBy(asc(receipts.createdAt))
+    .limit(50);
+  // the last row's createdAt becomes the next cursor; never scans from zero
+}
+// for large exports, stream or cursor through the driver instead of loading every row into memory
+```
+
+Java:
+```java
+// DON'T: OFFSET paging re-reads and discards the rows before it; page 1000 scans 50,000 rows
+List<Receipt> list(int page) {
+    return find("order by createdAt").page(Page.of(page, 50)).list();
+}
+// DO: keyset page on an indexed cursor; each page costs the same regardless of depth
+List<Receipt> listAfter(Instant cursor) {
+    return find("createdAt > ?1 order by createdAt", cursor).page(Page.of(0, 50)).list();
+    // the last row's createdAt becomes the next cursor; depth no longer costs rows
+}
+// stream large exports instead of holding the whole table in the heap
+try (var stream = find("order by createdAt").stream()) {
+    stream.forEach(this::process);   // one row at a time, constant memory
+}
+```
+
+### 10.5 Do not fire and forget
 **Do:** Record the side-effect intent in the same transaction as the state change and deliver it with a retrying worker (transactional outbox).
 **Don't:** Make a best-effort external call inside the request that silently vanishes if the process crashes.
 
@@ -1689,7 +1744,7 @@ public void createReceipt(Receipt receipt) {
 // @Scheduled worker polls unsent OutboxEntry rows, sends, marks sent, retries on failure
 ```
 
-### 10.5 Keep backups you have actually restored
+### 10.6 Keep backups you have actually restored
 **Do:** Run a scheduled drill that restores the backup into a scratch database and times it.
 **Don't:** Trust a backup you have never restored and assume it works.
 
@@ -1717,7 +1772,7 @@ jobs:
         run: psql "$ADMIN_URL" -c "DROP DATABASE scratch_restore"
 ```
 
-### 10.6 Scale with demand
+### 10.7 Scale with demand
 **Do:** Keep components stateless, autoscale on load, and cache deliberately with a clear invalidation rule.
 **Don't:** Pin user state to a single instance so you can never add a second one.
 
@@ -1756,7 +1811,7 @@ public class MeResource {
 }
 ```
 
-### 10.7 Meet performance targets under load
+### 10.8 Meet performance targets under load
 **Do:** Set a p99 latency budget and prove it with a load test in the pipeline before shipping.
 **Don't:** Ship the endpoint and find out about the p99 from angry users in production.
 
@@ -1780,7 +1835,7 @@ jobs:
           # 100 virtual users for 2 minutes; build fails if p99 exceeds 300ms
 ```
 
-### 10.8 Treat data as sacred
+### 10.9 Treat data as sacred
 **Do:** Soft-delete by stamping a deleted_at and keeping the row, route every schema change through a versioned migration, and choose storage whose durability and query shape fit the data.
 **Don't:** Hard-delete a live row, or apply a destructive schema change by hand outside version control.
 
@@ -1815,7 +1870,7 @@ Java:
 // every schema change is a versioned Flyway migration (V8__soft_delete.sql), never a hand ALTER
 ```
 
-### 10.9 Learn from every failure
+### 10.10 Learn from every failure
 **Do:** Run a blameless postmortem after every incident that ends in concrete backlog items with owners.
 **Don't:** Close the incident ticket the moment service is restored and move on.
 
@@ -2102,6 +2157,23 @@ Stack-agnostic (thresholds config, numbers not adjectives):
     "board": "https://github.com/org/billing/projects/1"
   }
 }
+```
+
+### 12.6 Run one visible, honest backlog
+**Do:** Keep every task, bug, and decision in one shared, openly visible tracker where anyone with a stake can read the priorities and statuses, and never carry a second shadow list in a spreadsheet or a chat thread.
+**Don't:** Let the "real" priorities live in someone's head or a private doc while the official board shows a sanitized version.
+
+Stack-agnostic (the artifact is the board configuration and a single-source rule, not app code):
+```md
+<!-- docs/process.md -- DON'T: a public board of safe work plus a private spreadsheet of what is actually burning.
+     the gap between them is where trust and priority rot. -->
+<!-- DO: one board is the source of truth; anything not on it does not get worked on -->
+# Process
+- Source of truth: https://github.com/org/billing/issues  (one board, read access for every stakeholder)
+- Rule: if it is not on the board, it is not work. No side lists, no "can you also..." in DMs that never land.
+- Bugs are first-class issues, not a hand-maintained "known issues" page that drifts from reality.
+- Priorities are visible, including the things deliberately deferred and why, not only the work in flight.
+- Status is honest: "blocked, waiting on X" beats "in progress" that has not moved in a week.
 ```
 
 ## Pillar 13: Clear ownership
