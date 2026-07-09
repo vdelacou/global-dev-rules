@@ -8,6 +8,29 @@ These are the global rules. They hold whether you build in any language, deploy 
 
 I have grouped them into eighteen pillars. The through-line is simple: decide how the project works before you decide what it is built with.
 
+## Contents
+
+| # | Pillar (this page) | Do and Don't (code) |
+|---|---|---|
+| 1 | [Consistency](#1-consistency-the-codebase-should-read-as-if-one-person-wrote-it) | [examples](global-rules-dos-and-donts.md#pillar-1-consistency) |
+| 2 | [Simplicity by default](#2-simplicity-by-default-the-best-code-is-the-code-you-never-wrote) | [examples](global-rules-dos-and-donts.md#pillar-2-simplicity-by-default) |
+| 3 | [Keep clean boundaries](#3-keep-clean-boundaries-you-should-be-able-to-swap-any-layer-without-touching-the-others) | [examples](global-rules-dos-and-donts.md#pillar-3-keep-clean-boundaries) |
+| 4 | [Proof over hope](#4-proof-over-hope-nothing-is-done-until-it-is-verified) | [examples](global-rules-dos-and-donts.md#pillar-4-proof-over-hope) |
+| 5 | [Secure by default](#5-secure-by-default-assume-someone-hostile-is-paying-attention) | [examples](global-rules-dos-and-donts.md#pillar-5-secure-by-default) |
+| 6 | [Private by default](#6-private-by-default-treat-personal-data-as-a-liability-not-an-asset) | [examples](global-rules-dos-and-donts.md#pillar-6-private-by-default) |
+| 7 | [Isolate by default](#7-isolate-by-default-one-users-data-must-never-reach-another) | [examples](global-rules-dos-and-donts.md#pillar-7-isolate-by-default) |
+| 8 | [Delivery should be boring](#8-delivery-should-be-boring-automate-the-path-to-production) | [examples](global-rules-dos-and-donts.md#pillar-8-delivery-should-be-boring) |
+| 9 | [Run as little as possible yourself](#9-run-as-little-as-possible-yourself-rent-the-undifferentiated-parts) | [examples](global-rules-dos-and-donts.md#pillar-9-run-as-little-as-possible-yourself) |
+| 10 | [Design for failure](#10-design-for-failure-everything-breaks-so-plan-the-recovery) | [examples](global-rules-dos-and-donts.md#pillar-10-design-for-failure) |
+| 11 | [Make it observable](#11-make-it-observable-you-cannot-fix-what-you-cannot-see) | [examples](global-rules-dos-and-donts.md#pillar-11-make-it-observable) |
+| 12 | [No black boxes](#12-no-black-boxes-transparency-and-documentation-are-not-optional) | [examples](global-rules-dos-and-donts.md#pillar-12-no-black-boxes) |
+| 13 | [Clear ownership](#13-clear-ownership-everything-has-a-name-next-to-it) | [examples](global-rules-dos-and-donts.md#pillar-13-clear-ownership) |
+| 14 | [Pave the road](#14-pave-the-road-make-the-right-way-the-easy-way) | [examples](global-rules-dos-and-donts.md#pillar-14-pave-the-road) |
+| 15 | [Enforce and verify](#15-enforce-and-verify-a-rule-you-dont-check-is-already-broken) | [examples](global-rules-dos-and-donts.md#pillar-15-enforce-and-verify) |
+| 16 | [Measure whether you are improving](#16-measure-whether-you-are-improving-keep-score-with-a-shared-yardstick) | [examples](global-rules-dos-and-donts.md#pillar-16-measure-whether-you-are-improving) |
+| 17 | [Obsess over the whole experience](#17-obsess-over-the-whole-experience-the-product-is-more-than-the-interface) | [examples](global-rules-dos-and-donts.md#pillar-17-obsess-over-the-whole-experience) |
+| 18 | [Validate before you build](#18-validate-before-you-build-make-sure-it-is-worth-building-at-all) | [examples](global-rules-dos-and-donts.md#pillar-18-validate-before-you-build) |
+
 ## 1. Consistency: the codebase should read as if one person wrote it
 
 A project's real cost is not writing code, it is reading and changing code that already exists. Every inconsistency taxes that work. Different styles, naming, and structure force every reader to re-learn the rules on every file, and they let real bugs hide in the noise of cosmetic difference.

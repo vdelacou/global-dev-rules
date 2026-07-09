@@ -20,24 +20,26 @@ record Err<T>(String error) implements Result<T> {}
 
 ## Contents
 
-1. [Pillar 1: Consistency](#pillar-1-consistency)
-2. [Pillar 2: Simplicity by default](#pillar-2-simplicity-by-default)
-3. [Pillar 3: Keep clean boundaries](#pillar-3-keep-clean-boundaries)
-4. [Pillar 4: Proof over hope](#pillar-4-proof-over-hope)
-5. [Pillar 5: Secure by default](#pillar-5-secure-by-default)
-6. [Pillar 6: Private by default](#pillar-6-private-by-default)
-7. [Pillar 7: Isolate by default](#pillar-7-isolate-by-default)
-8. [Pillar 8: Delivery should be boring](#pillar-8-delivery-should-be-boring)
-9. [Pillar 9: Run as little as possible yourself](#pillar-9-run-as-little-as-possible-yourself)
-10. [Pillar 10: Design for failure](#pillar-10-design-for-failure)
-11. [Pillar 11: Make it observable](#pillar-11-make-it-observable)
-12. [Pillar 12: No black boxes](#pillar-12-no-black-boxes)
-13. [Pillar 13: Clear ownership](#pillar-13-clear-ownership)
-14. [Pillar 14: Pave the road](#pillar-14-pave-the-road)
-15. [Pillar 15: Enforce and verify](#pillar-15-enforce-and-verify)
-16. [Pillar 16: Measure whether you are improving](#pillar-16-measure-whether-you-are-improving)
-17. [Pillar 17: Obsess over the whole experience](#pillar-17-obsess-over-the-whole-experience)
-18. [Pillar 18: Validate before you build](#pillar-18-validate-before-you-build)
+| # | Do and Don't (this page) | Pillar (prose) |
+|---|---|---|
+| 1 | [Consistency](#pillar-1-consistency) | [Consistency](global-rules-every-new-project.md#1-consistency-the-codebase-should-read-as-if-one-person-wrote-it) |
+| 2 | [Simplicity by default](#pillar-2-simplicity-by-default) | [Simplicity by default](global-rules-every-new-project.md#2-simplicity-by-default-the-best-code-is-the-code-you-never-wrote) |
+| 3 | [Keep clean boundaries](#pillar-3-keep-clean-boundaries) | [Keep clean boundaries](global-rules-every-new-project.md#3-keep-clean-boundaries-you-should-be-able-to-swap-any-layer-without-touching-the-others) |
+| 4 | [Proof over hope](#pillar-4-proof-over-hope) | [Proof over hope](global-rules-every-new-project.md#4-proof-over-hope-nothing-is-done-until-it-is-verified) |
+| 5 | [Secure by default](#pillar-5-secure-by-default) | [Secure by default](global-rules-every-new-project.md#5-secure-by-default-assume-someone-hostile-is-paying-attention) |
+| 6 | [Private by default](#pillar-6-private-by-default) | [Private by default](global-rules-every-new-project.md#6-private-by-default-treat-personal-data-as-a-liability-not-an-asset) |
+| 7 | [Isolate by default](#pillar-7-isolate-by-default) | [Isolate by default](global-rules-every-new-project.md#7-isolate-by-default-one-users-data-must-never-reach-another) |
+| 8 | [Delivery should be boring](#pillar-8-delivery-should-be-boring) | [Delivery should be boring](global-rules-every-new-project.md#8-delivery-should-be-boring-automate-the-path-to-production) |
+| 9 | [Run as little as possible yourself](#pillar-9-run-as-little-as-possible-yourself) | [Run as little as possible yourself](global-rules-every-new-project.md#9-run-as-little-as-possible-yourself-rent-the-undifferentiated-parts) |
+| 10 | [Design for failure](#pillar-10-design-for-failure) | [Design for failure](global-rules-every-new-project.md#10-design-for-failure-everything-breaks-so-plan-the-recovery) |
+| 11 | [Make it observable](#pillar-11-make-it-observable) | [Make it observable](global-rules-every-new-project.md#11-make-it-observable-you-cannot-fix-what-you-cannot-see) |
+| 12 | [No black boxes](#pillar-12-no-black-boxes) | [No black boxes](global-rules-every-new-project.md#12-no-black-boxes-transparency-and-documentation-are-not-optional) |
+| 13 | [Clear ownership](#pillar-13-clear-ownership) | [Clear ownership](global-rules-every-new-project.md#13-clear-ownership-everything-has-a-name-next-to-it) |
+| 14 | [Pave the road](#pillar-14-pave-the-road) | [Pave the road](global-rules-every-new-project.md#14-pave-the-road-make-the-right-way-the-easy-way) |
+| 15 | [Enforce and verify](#pillar-15-enforce-and-verify) | [Enforce and verify](global-rules-every-new-project.md#15-enforce-and-verify-a-rule-you-dont-check-is-already-broken) |
+| 16 | [Measure whether you are improving](#pillar-16-measure-whether-you-are-improving) | [Measure whether you are improving](global-rules-every-new-project.md#16-measure-whether-you-are-improving-keep-score-with-a-shared-yardstick) |
+| 17 | [Obsess over the whole experience](#pillar-17-obsess-over-the-whole-experience) | [Obsess over the whole experience](global-rules-every-new-project.md#17-obsess-over-the-whole-experience-the-product-is-more-than-the-interface) |
+| 18 | [Validate before you build](#pillar-18-validate-before-you-build) | [Validate before you build](global-rules-every-new-project.md#18-validate-before-you-build-make-sure-it-is-worth-building-at-all) |
 
 ---
 
