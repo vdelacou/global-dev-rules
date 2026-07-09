@@ -54,6 +54,7 @@ What good looks like: you can replace the database, the web framework, or the en
 - Make coverage mean something. A high line-coverage number is easy to fake, so treat mutation testing, which checks that your suite actually fails when the code is deliberately broken, as the coverage metric that matters. Hold your core logic to a near-total bar and glue code to a looser one, and when a gate is hard to pass, restructure the code rather than lower the threshold.
 - Test behavior, not internals. Point a test at what a feature should do, described in the language of the domain, so you can restructure the code freely without rewriting the tests. Prefer simple hand-written stand-ins for external systems over heavy mocking that only re-asserts your own call sequence, and never write a test whose real claim is that a third-party library works.
 - Gate every merge. Static analysis and the full test suite run on every change, and nothing merges with a critical defect or a red pipeline.
+- Hold generated code to the same bar. Code a tool — a scaffolder, a generator, or an AI assistant — produced is still code: it runs through the identical suite and review a human's would. Provenance is not proof; the checks are.
 
 What good looks like: you can deploy on a Friday afternoon without fear, because the pipeline, not a nervous human, decides what is safe to ship.
 
@@ -203,6 +204,7 @@ Opinions about whether a team is getting better are cheap; a small set of agreed
 - Pair those delivery metrics with flow metrics such as cycle time, throughput, and work in progress, which show where work stalls between an idea and its release.
 - Treat them as system metrics, not a stick to beat people with. They describe the pipeline and the process, and they improve when you fix the system rather than when you push individuals harder.
 - Watch the trend, not the snapshot. A single reading means little; the direction over weeks tells you whether the rest of these pillars are actually paying off.
+- Treat cost as a first-class metric. Cloud spend is a latency-shaped metric: measure it per service, alert on unexplained growth, and design components to cost close to nothing when idle, so scale brings revenue in faster than it brings a bill.
 
 What good looks like: you can say, with numbers, whether this quarter's delivery was faster and more stable than last quarter's, and every change to how you work is judged by whether it moved those metrics.
 
@@ -214,6 +216,7 @@ You can satisfy every pillar above and still build something people quietly aban
 - Earn trust rather than extract a sale. Being honest with users, even when it costs a conversion, is what turns them into people who come back. A short-term win that erodes trust is the most expensive kind.
 - Design for your users, not the demo. Ground decisions in how real people actually behave, which can differ sharply by market and culture, rather than in what looks good in a pitch. Watch what they do, not what they say they will do.
 - Let technology serve the person, not replace them. Automation should remove friction and give people back their time, not paper over a worse experience. The human touch is the part hardest to copy, so protect it.
+- Speak the user's language. Hold every user-facing string in a catalog keyed by meaning, never hardcoded in the interface, so the product can be localized for the markets you serve — which may differ sharply from your home one.
 
 What good looks like: users call the product a relief to use, they trust you with the hard moments (their data, their money, their mistakes), and the reasons they stay are things a competitor cannot clone in a sprint.
 

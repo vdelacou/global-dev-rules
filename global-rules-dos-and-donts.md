@@ -1,6 +1,6 @@
 # The Global Rules: Do and Don't, with Examples
 
-A companion to [The Global Rules Every New Project Should Have](global-rules-every-new-project.md). For each of the eighteen pillars, every sub-concept below gives a clear Do and Don't with short, contrasting code examples in TypeScript (Bun on the backend, React on the frontend) and Java (Quarkus). Where a principle is not application code (infrastructure, delivery, ownership, metrics, product), the example is the real artifact instead: a config file, a CI step, an infrastructure block, or a command, with the tool named and explained in comments.
+A companion to [The Global Rules Every New Project Should Have](global-rules-every-new-project.md). For each of the eighteen pillars, every sub-concept below gives a clear Do and Don't with short, contrasting code examples in TypeScript and Java. The examples favor the language and its standard library; a framework appears only where the concept needs one to be shown. Where a principle is not application code (infrastructure, delivery, ownership, metrics, product), the example is the real artifact instead: a config file, a CI step, an infrastructure block, or a command, with the tool named and explained in comments.
 
 Errors are modeled as values throughout: in TypeScript as a Result union, in Java as a native sealed Result type. Every example below assumes these two shapes:
 
@@ -433,7 +433,7 @@ const httpOrders: OrderGateway = {
 };
 ```
 
-Java (Quarkus):
+Java (JPA):
 ```java
 // DON'T: the JPA entity is serialized straight to JSON, so the DB shape becomes the API shape
 @GET public List<Order> all() { return orderRepo.listAll(); } // Order is the @Entity
@@ -449,7 +449,7 @@ Java (Quarkus):
 **Do:** Model the business in the domain and storage in the database, and map between them at the repository.
 **Don't:** Let the ORM entity or table shape be your domain object, so persistence concerns dictate business behavior.
 
-TypeScript (Bun + Drizzle):
+TypeScript (Drizzle):
 ```ts
 // DON'T: the Drizzle row is passed around as "the order"; nullable columns and DB shape leak everywhere
 const row = await db.query.orders.findFirst({ where: eq(orders.id, id) });
@@ -466,7 +466,7 @@ const orderRepo = {
 };
 ```
 
-Java (Quarkus + Hibernate/Panache):
+Java (JPA):
 ```java
 // DON'T: the @Entity is the model, so JPA annotations, lazy relations, and DB shape leak into business code
 @Entity public class Order extends PanacheEntity { public String status; public List<Line> lines; }
@@ -643,7 +643,7 @@ Java:
 
 TypeScript:
 ```ts
-// DON'T: asserts an internal call and effectively tests that Drizzle was invoked
+// DON'T: asserts an internal call and effectively tests that the ORM was invoked
 test("register calls insert", async () => {
   const spy = jest.spyOn(db, "insert");
   await register(input); expect(spy).toHaveBeenCalled(); // couples to implementation
@@ -710,6 +710,19 @@ Java:
 // CI: mvn -B verify   // non-zero exit on any failing test, required for merge
 ```
 
+### 4.7 Hold generated code to the same bar
+**Do:** Run AI- or generator-produced code through the identical suite a human's would, and treat its output as a draft until the tests and a reviewer say otherwise.
+**Don't:** Trust generated code on the strength of the tool that produced it, or merge it with the checks waived.
+
+Stack-agnostic (provenance is not proof; the change proves itself through the gates):
+```text
+# DON'T: the change came from a generator, so it ships past the gates on trust
+#   "the tool wrote it, it must be fine" -- provenance is not proof
+#   git commit --no-verify; reviewer rubber-stamps "AI-generated, looks fine"
+# DO: generated code is a draft until the suite and a human say otherwise
+#   lint + tests + typecheck run on it like any other change;
+#   the reviewer reads the diff, not the attribution
+```
 
 ## Pillar 5: Secure by default
 
@@ -725,7 +738,7 @@ TypeScript:
 const stripe = new Stripe('sk_live_51H8xY2eZ...');
 console.log('using key', process.env.STRIPE_KEY);
 // DO: injected at runtime from the secret manager, never logged
-const key = await secrets.get('stripe/api-key'); // resolved from Scaleway Secret Manager
+const key = await secrets.get('stripe/api-key'); // resolved from the secret manager
 if (!key.ok) return { ok: false, error: 'missing_secret' } as const;
 const stripe = new Stripe(key.value);
 logger.info('stripe client ready'); // value never leaves the store
@@ -879,18 +892,18 @@ TypeScript (React):
 Terraform / OpenTofu:
 ```hcl
 # DON'T: database open to the whole internet, one credential away from breach
-resource "scaleway_rdb_instance" "db" {
+resource "managed_database" "db" {
   name             = "app-db"
   is_ha_cluster    = true
   # private_network omitted => public endpoint reachable from 0.0.0.0/0
 }
 
 # DO: attach the datastore to a private network, no public endpoint
-resource "scaleway_rdb_instance" "db" {
+resource "managed_database" "db" {
   name          = "app-db"
   is_ha_cluster = true
   private_network {
-    pn_id = scaleway_vpc_private_network.main.id  # only in-VPC services can dial in
+    pn_id = private_network.main.id  # only in-VPC services can dial in
   }
   # no public_endpoint block => not routable from the internet
 }
@@ -1349,13 +1362,13 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun test && bun run typecheck && bun run lint:strict
       - name: Deploy canary (10% traffic)
-        run: scw container deploy --image "$IMAGE" --traffic canary=10
+        run: ./scripts/deploy --canary 10 --image "$IMAGE"
       - name: Watch canary SLO for 5 minutes
         run: ./ci/watch-error-rate.sh --max 0.01 --window 5m   # aborts job if breached
       - name: Promote to 100%
-        run: scw container deploy --image "$IMAGE" --traffic stable=100
+        run: ./scripts/deploy --promote 100 --image "$IMAGE"
   # rollback is one step: re-run the previous green deploy, or:
-  #   scw container deploy --image "$LAST_GOOD_IMAGE" --traffic stable=100
+  #   ./scripts/deploy --promote 100 --image "$LAST_GOOD_IMAGE"
 ```
 
 ### 8.3 Infrastructure as code
@@ -1365,12 +1378,12 @@ jobs:
 Applies to any stack (OpenTofu/Terraform):
 ```hcl
 # DON'T: "created by hand" in the console, no file, no history, no review
-# Bucket kuitto-receipts was clicked into existence by an engineer in the web UI on a Tuesday.
+# Bucket "receipts" was clicked into existence by an engineer in the web UI on a Tuesday.
 # Nobody can recreate it, diff it, or know why versioning is off. This is the anti-pattern.
 
 # DO: the resource is a file, so it is reviewable, reproducible, and destroyable
-resource "scaleway_object_bucket" "receipts" {
-  name = "kuitto-receipts"
+resource "object_bucket" "receipts" {
+  name = "receipts"
   versioning {
     enabled = true
   }
@@ -1499,15 +1512,15 @@ Every server you patch, cert you renew by hand, and console you click in is undi
 Applies to any stack (OpenTofu/Terraform):
 ```hcl
 # DON'T: a raw VM you now have to patch, back up, monitor, and fail over yourself
-resource "scaleway_instance_server" "db_vm" {
+resource "compute_instance" "db_vm" {
   type  = "DEV1-M"
   image = "ubuntu_jammy"
   # ... then someone hand-installs postgres, and it is now a pet you feed forever
 }
 
 # DO: a managed database; the provider handles patching, backups, and HA
-resource "scaleway_rdb_instance" "main" {
-  name          = "kuitto-prod"
+resource "managed_database" "main" {
+  name          = "app-prod"
   engine        = "PostgreSQL-15"
   node_type     = "DB-GP-S"
   is_ha_cluster = true
@@ -1548,11 +1561,11 @@ Applies to any stack (OpenTofu/Terraform):
 # Engineer pastes a .pem into a load balancer once a year. Miss the date -> full outage. Anti-pattern.
 
 # DO: managed certificate, issued and renewed by the platform, no human in the loop
-resource "scaleway_lb_certificate" "app" {
-  lb_id = scaleway_lb.main.id
-  name  = "kuitto-tls"
+resource "lb_certificate" "app" {
+  lb_id = load_balancer.main.id
+  name  = "app-tls"
   letsencrypt {
-    common_name = "app.kuitto.fr"          # platform requests and auto-renews via ACME
+    common_name = "app.example.com"          # platform requests and auto-renews via ACME
   }
 }
 # renewal happens on its own; nobody owns an expiry date on a calendar
@@ -1569,7 +1582,7 @@ Applies to any stack (branch protection as code + read-only human IAM):
 
 # DO: humans are read-only; only the CI identity can apply infra, and only via a reviewed merge
 resource "github_branch_protection" "main" {
-  repository_id = github_repository.kuitto.node_id
+  repository_id = github_repository.app.node_id
   pattern       = "main"
   required_pull_request_reviews {
     required_approving_review_count = 1
@@ -1597,7 +1610,7 @@ Applies to any stack (SLO as code, e.g. an alerting rule):
 
 # DO: an explicit objective with a burn-rate alert (99.9% availability => 0.1% error budget)
 slo:
-  service: kuitto-api
+  service: app-api
   objective: 0.999                 # 99.9% of requests succeed over 30 days
   error_budget: 0.001
 alerting:
@@ -1645,11 +1658,11 @@ return <OrderList orders={res.value} />;
 
 ### 10.3 Keep read paths explicit
 **Do:** Write reads as hand-authored SQL you can see and tune, and let the ORM own writes.
-**Don't:** Let a lazy ORM graph generate opaque N+1 queries on your hot read path.
+**Don't:** Let an ORM generate opaque queries on your hot read path — a lazy N+1 or a hidden relation cascade — that you cannot see or tune.
 
 TypeScript:
 ```ts
-// DON'T: an ORM relation walk that fires one query per receipt on the list endpoint (N+1)
+// DON'T: an ORM relation walk fires a cascade of hidden queries across relation levels — you cannot EXPLAIN or tune them, and they balloon on a list path
 const orgs = await db.query.orgs.findMany({ with: { receipts: { with: { lines: true } } } });
 // DO: explicit SQL for the read (see it, EXPLAIN it, tune it); ORM stays for the write
 const rows = await db.execute(sql`
@@ -1672,7 +1685,7 @@ List<ReceiptSummary> summaries = getEntityManager().createNativeQuery("""
     WHERE r.org_id = :org
     GROUP BY r.id ORDER BY r.created_at DESC LIMIT 50""", ReceiptSummary.class)
   .setParameter("org", orgId).getResultList();
-newReceipt.persist();   // write path stays with Hibernate/Panache
+newReceipt.persist();   // write path stays with the ORM
 ```
 
 ### 10.4 Keep reads fast as the table grows
@@ -1686,6 +1699,7 @@ async function list(page: number) {
   return db.select().from(receipts).limit(50).offset(page * 50);
 }
 // DO: keyset page on an indexed cursor; each page costs the same, no matter how deep
+//   page on a unique cursor (e.g. createdAt, id) so tied rows neither skip nor duplicate
 async function listAfter(afterCreatedAt?: string) {
   return db.select().from(receipts)
     .where(afterCreatedAt ? gt(receipts.createdAt, new Date(afterCreatedAt)) : sql`true`)
@@ -1703,6 +1717,7 @@ List<Receipt> list(int page) {
     return find("order by createdAt").page(Page.of(page, 50)).list();
 }
 // DO: keyset page on an indexed cursor; each page costs the same regardless of depth
+//   use a unique cursor (createdAt, id) so ties neither skip nor duplicate
 List<Receipt> listAfter(Instant cursor) {
     return find("createdAt > ?1 order by createdAt", cursor).page(Page.of(0, 50)).list();
     // the last row's createdAt becomes the next cursor; depth no longer costs rows
@@ -1916,7 +1931,7 @@ Java:
 ```java
 // DON'T: System.out, no trace context, nothing to correlate on
 System.out.println("charging user " + userId);
-// DO: OpenTelemetry span, auto-correlated by Quarkus, attributes queryable later
+// DO: OpenTelemetry span, auto-correlated by the runtime, attributes queryable later
 Span span = tracer.spanBuilder("charge").startSpan();
 try (Scope s = span.makeCurrent()) {
     span.setAttribute("user.id", userId);
@@ -1972,8 +1987,8 @@ Timer.builder("checkout.latency")
 ```
 
 ### 11.3 Alert on what matters
-**Do:** Alert on error rate and p95/p99 latency crossing a user-visible budget, and page only when a human must act.
-**Don't:** Wire noisy static-threshold alerts that fire nightly and train everyone to ignore the pager.
+**Do:** Alert on error rate and p95/p99 latency crossing a user-visible budget, page only when a human must act, and retire any alert that pages twice without prompting a fix; after an incident slips through, fix what broke, not just the alert that missed it.
+**Don't:** Wire noisy static-threshold alerts that fire nightly and train everyone to ignore the pager, or leave a useless alert standing because no one owns removing it.
 
 TypeScript (stack-agnostic alert rule, Prometheus style):
 ```yaml
@@ -2014,7 +2029,7 @@ Stack-agnostic (README skeleton):
 
 <!-- DO: exact, runnable, and testable so CI can prove it is current -->
 # billing-service
-French SME billing API. Bun + Hono.
+Billing service API (TypeScript).
 
 ## Prerequisites
 - Bun >= 1.1
@@ -2132,7 +2147,7 @@ Cause: session-level lock never released when the socket dropped.
 Fix: use transaction-level advisory locks (pg_advisory_xact_lock).
 Guard: added a lock-timeout test in migrate.spec.ts.
 
-## 2026-07-02  Scaleway TEM rate-limits per sender, not per key
+## 2026-07-02  The mail provider rate-limits per sender, not per key
 Guard: batch sends behind a token bucket in the mailer adapter.
 ```
 
@@ -2299,7 +2314,7 @@ Stack-agnostic (scaffold command + generated structure):
 $ bunx @org/create-service billing
 # generates:
 #   billing/
-#   ├── src/index.ts            # Hono app + /health, already wired
+#   ├── src/index.ts            # app + /health, already wired
 #   ├── src/index.test.ts       # a passing smoke test, so CI is green on commit 1
 #   ├── .github/workflows/ci.yml  # build + test + typecheck + lint, pre-configured
 #   ├── .githooks/pre-commit    # the same gates locally
@@ -2433,60 +2448,37 @@ var client = supportedClient();
 '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }]
 ```
 
-### 15.4 Spend human judgment where it counts
-**Do:** Let the machine own formatting and mechanics so review can focus on design and whether this is the right change.
-**Don't:** Burn a reviewer's attention debating brace placement a formatter already settles.
+### 15.4 Test the bypass, not the happy path
+**Do:** Assert the forbidden path is refused — the wrong token, the missing token, the lower-privilege role — not only that the authorized call succeeds. The cross-tenant case is shown in 7.5.
+**Don't:** Test only the happy path and assume the guard covers everyone else.
 
 TypeScript:
 ```ts
-// DON'T (a review comment): "put a space after the comma and align these"
-//   the formatter already has an opinion; the human just wasted a round trip
-// DO (a review comment): "this use-case now knows about the HTTP layer.
-//   should the presenter map the error instead, so core stays transport-free?"
-//   mechanics are settled by `bun run lint` in CI; the human debates the design
-```
-
-Java:
-```java
-// DON'T (a review comment): "tabs vs spaces here, and this import is unused"
-//   Spotless and the compiler catch both; the comment adds no judgment
-// DO (a review comment): "ExpenseService reaches into the repository twice for the
-//   same row. is a single load clearer, and does this belong in the domain at all?"
-```
-
-### 15.5 Test the bypass, not the happy path
-**Do:** Assert that hitting the resource directly with the wrong tenant's token returns not_found, not just that the owner's request succeeds.
-**Don't:** Test only the authorized call and assume the guard covers everyone else.
-
-TypeScript:
-```ts
-// DON'T: proves nothing about isolation; the owner was always going to succeed
-test("owner reads their expense", async () => {
-  const res = await app.request(`/v1/expenses/${expenseA}`, authAs(orgA));
-  expect(res.status).toBe(200);
+// DON'T: proves nothing about authorization; the admin was always going to succeed
+test("admin can purge", async () => {
+  const res = await app.request('/v1/admin/purge', authAs(adminUser));
+  expect(res.status).toBe(204);
 });
-// DO: org B's token against org A's resource must be indistinguishable from missing
-test("cross-tenant read is refused as not_found", async () => {
-  const res = await app.request(`/v1/expenses/${expenseA}`, authAs(orgB));
-  expect(res.status).toBe(404);  // not 403: existence itself must not leak
+// DO: a non-admin hitting the same path is refused — the guard is what the test proves
+test("non-admin purge is refused", async () => {
+  const res = await app.request('/v1/admin/purge', authAs(staffUser));
+  expect(res.status).toBe(403);
 });
 ```
 
 Java:
 ```java
-// DON'T: only the happy path, so a broken owner check would still pass this test
-@Test void ownerReadsExpense() {
-    given().auth().oauth2(tokenOrgA)
-        .get("/v1/expenses/{id}", expenseA).then().statusCode(200);
+// DON'T: only the admin call, so a missing role check would still pass
+@Test void adminCanPurge() {
+    given().auth().oauth2(adminToken).delete("/v1/admin/purge").then().statusCode(204);
 }
-// DO: the bypass path is the assertion; wrong tenant sees a 404, never the row
-@Test void crossTenantReadIsNotFound() {
-    given().auth().oauth2(tokenOrgB)
-        .get("/v1/expenses/{id}", expenseA).then().statusCode(404);
+// DO: the lower-privilege token is the assertion; the bypass is what fails the test
+@Test void nonAdminPurgeIsForbidden() {
+    given().auth().oauth2(staffToken).delete("/v1/admin/purge").then().statusCode(403);
 }
 ```
 
-### 15.6 Compliance is not security
+### 15.5 Compliance is not security
 **Do:** Produce proof anyone can independently re-check by running it, not a ticked box in an audit sheet.
 **Don't:** Treat a green compliance checklist as evidence the control actually works.
 
@@ -2499,7 +2491,7 @@ Stack-agnostic (the artifact is a runnable verification script, not app code):
 #   a checkbox is a claim; it is not the state of the running system today.
 # DO: assert the property against the live endpoint, so the proof re-runs on demand.
 set -euo pipefail
-host="api.kuitto.example"
+host="api.example.com"
 # fail if the server negotiates anything below TLS 1.2
 if openssl s_client -connect "$host:443" -tls1_1 </dev/null 2>/dev/null \
      | grep -q "Protocol.*TLSv1.1"; then
@@ -2509,7 +2501,7 @@ fi
 echo "OK: $host refuses TLS < 1.2"  # anyone can run this and get the same answer
 ```
 
-### 15.7 Audit the gaps between systems
+### 15.6 Audit the gaps between systems
 **Do:** Test the full path a request travels, edge to service to database, so a hole between two correct systems is caught.
 **Don't:** Verify each service in isolation and assume the composition is safe.
 
@@ -2538,7 +2530,7 @@ Java:
 }
 ```
 
-### 15.8 Fix the class, not the instance
+### 15.7 Fix the class, not the instance
 **Do:** Grep for every occurrence of the pattern, fix them all, and add a guard that fails the build if it returns.
 **Don't:** Patch the one reported spot and leave siblings live.
 
@@ -2548,19 +2540,19 @@ Stack-agnostic (the artifact is a search command plus a CI guard, not app code):
 # DON'T: patch only the file in the bug report and close the ticket.
 #   the same raw interpolation almost certainly lives elsewhere, still exploitable.
 # DO: enumerate the whole class first, fix each hit, then lock the door behind you.
-rg -n 'db\.query\(`.*\$\{' -- 'packages/**/*.ts'   # every string-interpolated SQL sink
+rg -n '(db\.query|db\.execute)\(`.*\$\{' -- 'packages/**/*.ts'   # every string-interpolated SQL sink
 
 # Then a ripgrep-backed CI gate makes a regression fail loudly:
 # .github/workflows/ci.yml
 #   - name: forbid interpolated SQL
 #     run: |
-#       if rg -q 'db\.query\(`.*\$\{' -- 'packages/**/*.ts'; then
+#       if rg -q '(db\.query|db\.execute)\(`.*\$\{' -- 'packages/**/*.ts'; then
 #         echo "raw interpolation in a SQL sink; use parameterised queries" >&2
 #         exit 1
 #       fi
 ```
 
-### 15.9 Make proof re-checkable
+### 15.8 Make proof re-checkable
 **Do:** Ship reproducible evidence anyone accountable can run themselves, and make sure they have the access to run it.
 **Don't:** Paste a screenshot of a passing run into a slide and call it verified.
 
@@ -2578,6 +2570,27 @@ DO: commit the check and document how to run it, so proof is reproducible on dem
   Evidence = the exit code you get when you run it, not an image someone showed you.
 ```
 
+### 15.9 Spend human judgment where it counts
+**Do:** Let the machine own formatting and mechanics so review can focus on design and whether this is the right change.
+**Don't:** Burn a reviewer's attention debating brace placement a formatter already settles.
+
+TypeScript:
+```ts
+// DON'T (a review comment): "put a space after the comma and align these"
+//   the formatter already has an opinion; the human just wasted a round trip
+// DO (a review comment): "this use-case now knows about the HTTP layer.
+//   should the presenter map the error instead, so core stays transport-free?"
+//   mechanics are settled by `bun run lint` in CI; the human debates the design
+```
+
+Java:
+```java
+// DON'T (a review comment): "tabs vs spaces here, and this import is unused"
+//   Spotless and the compiler catch both; the comment adds no judgment
+// DO (a review comment): "ExpenseService reaches into the repository twice for the
+//   same row. is a single load clearer, and does this belong in the domain at all?"
+```
+
 ## Pillar 16: Measure whether you are improving
 
 Numbers only help if they point at the system and move over time; instrument delivery and flow, watch the trend, and never turn them into a stick.
@@ -2586,7 +2599,7 @@ Numbers only help if they point at the system and move over time; instrument del
 **Do:** Derive deploy frequency, lead time, change failure rate, and time to restore from real CI/CD events using a Four Keys style pipeline.
 **Don't:** Hand-maintain a status slide someone updates from memory once a month.
 
-Proposed tool: a Four Keys style pipeline. CI/CD emits a structured event on every deployment and every incident; those events land in a warehouse table, and a dashboard computes the four metrics from them. The source of truth is the pipeline, not a person. Stack-agnostic (the artifact is the event emission step in CI):
+Use a Four Keys style pipeline: CI/CD emits a structured event on every deployment and every incident; those events land in a warehouse table, and a dashboard computes the four metrics from them. The source of truth is the pipeline, not a person. Stack-agnostic (the artifact is the event emission step in CI):
 
 ```yaml
 # .github/workflows/deploy.yml -- DO: emit a machine-readable deployment event
@@ -2599,7 +2612,7 @@ Proposed tool: a Four Keys style pipeline. CI/CD emits a structured event on eve
     curl -sf -X POST "$FOURKEYS_EVENT_URL" \
       -H 'content-type: application/json' \
       -d "{\"event_type\":\"deployment\",
-           \"service\":\"kuitto-api\",
+           \"service\":\"app-api\",
            \"sha\":\"${GITHUB_SHA}\",
            \"deployed_at\":\"$(date -u +%FT%TZ)\"}"
 # A matching "incident" event (opened + resolved timestamps) feeds
@@ -2662,6 +2675,23 @@ groups:
         for: 24h
         annotations:
           summary: "CFR trending up over a week -- look at the process, not yesterday"
+```
+
+### 16.5 Treat cost as a first-class metric
+**Do:** Measure spend per service and alert on unexplained growth, the way you alert on latency, and design components to cost near nothing when idle.
+**Don't:** Discover cost in the monthly invoice, after the waste has run for weeks.
+
+Stack-agnostic (the artifact is a cost-growth alert over the billing export, not app code):
+```yaml
+# DON'T: cost surfaces once a month in a PDF no engineer reads, weeks after the leak.
+# DO: alert on spend growth the same way you alert on error rate, against a budget.
+# cloud_cost_usd_total: daily spend per service, exported from the cloud billing feed
+- alert: DailyCostAnomaly
+  # spend up >50% week-over-week, sustained for a day, before anyone is paged
+  expr: avg_over_time(cloud_cost_usd_total[7d]) > 1.5 * avg_over_time(cloud_cost_usd_total[7d] offset 7d)
+  for: 24h
+  annotations:
+    summary: "Daily spend up >50% week-over-week -- a service is leaking money"
 ```
 
 ## Pillar 17: Obsess over the whole experience
@@ -2751,11 +2781,27 @@ function Help({ t }: { t: Translate }) {
     <>
       <Bot fallback={null} />
       {/* always rendered, never hidden behind N failed bot turns */}
-      <ContactHuman href="mailto:support@kuitto.example">
+      <ContactHuman href="mailto:support@example.com">
         {t("help.talkToSomeone") /* "Talk to someone" */}
       </ContactHuman>
     </>
   );
+}
+```
+
+### 17.5 Speak the user's language
+**Do:** Hold every user-facing string in a catalog keyed by meaning, so localization is a data change, not a code change.
+**Don't:** Hardcode prose in components, so every new market is a rewrite of every screen.
+
+TypeScript (React):
+```tsx
+// DON'T: copy baked into the component; a new language means editing every screen
+function Empty() {
+  return <p>No expenses yet. Add your first receipt.</p>;
+}
+// DO: a key into a catalog; the translator works on the catalog, not the code
+function Empty({ t }: { t: Translate }) {
+  return <p>{t("expenses.empty")}</p>; // "Aucune note de frais. Ajoutez votre premier justificatif."
 }
 ```
 
@@ -2767,7 +2813,7 @@ The cheapest code is the code you did not write; talk to users, test demand with
 **Do:** Run short problem interviews about how people handle the pain today before committing an engineer.
 **Don't:** Build a feature on an internal assumption no customer has confirmed.
 
-Proposed method: problem interviews. Stack-agnostic (the artifact is an interview script, not app code):
+Problem interviews. Stack-agnostic (the artifact is an interview script, not app code):
 
 ```md
 <!-- research/problem-interview.md -- validate the problem, not your solution -->
@@ -2786,7 +2832,7 @@ DO: ask about the last real occurrence of the problem, in their words.
 **Do:** Put up a landing page with an email capture, or run a concierge MVP by hand, before building the product.
 **Don't:** Build the full system to discover whether anyone wants it.
 
-Proposed tools: a static landing page (any host) with a form wired to an email-capture and product-analytics tool, plus a manual concierge process for the first users. Stack-agnostic (the artifact is the capture snippet on the page):
+A static landing page (any host) with a form wired to an email-capture and product-analytics tool, plus a manual concierge process for the first users. Stack-agnostic (the artifact is the capture snippet on the page):
 
 ```html
 <!-- landing/index.html -- DON'T: skip straight to a 3-month build to test demand -->
