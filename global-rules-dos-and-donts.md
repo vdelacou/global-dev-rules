@@ -683,8 +683,9 @@ TypeScript:
 ```ts
 // DON'T: the workflow ignores test failures, so red merges anyway
 // .github/workflows/ci.yml
-// - run: bun test || true          # swallows the exit code
-// - run: bun test --bail=false     # reports red but the job still passes
+// - run: bun test || true          # swallows the non-zero exit code
+// - run: bun test
+//   continue-on-error: true        # step warns but the job still passes
 // DO: the suite must pass, a non-zero exit fails the job and blocks the merge
 // .github/workflows/ci.yml
 // - run: bun run lint && bun run typecheck && bun test
@@ -853,11 +854,15 @@ public User create(@Valid NewUser in) { return service.create(in); }
 
 TypeScript (React):
 ```tsx
-// DON'T: the only thing stopping the action is a hidden button; the endpoint trusts the client
+// DON'T: the only thing stopping the action is a hidden button; the endpoint trusts the client, and a 403 is unhandled
 {isAdmin && <button onClick={() => api.post('/admin/purge')}>Delete all</button>}
-// DO: hide it for UX, but the server authorizes every call, so a crafted request from a non-admin still gets 403
-{isAdmin && <button onClick={() => api.post('/admin/purge')}>Delete all</button>}
-// api.post('/admin/purge') -> the server verifies the token role and returns 403 if not admin, UI or not
+// DO: show it only for UX, and handle the server's 403 so a non-admin crafted request fails gracefully — the server is the real gate
+{isAdmin && (
+  <button onClick={async () => {
+    const res = await api.post('/admin/purge');
+    if (res.status === 403) setToast(t('errors.forbidden')); // authorized on the server; the UI just explains the refusal
+  }}>Delete all</button>
+)}
 ```
 
 ### 5.6 Expose only what has to be public
@@ -1508,7 +1513,7 @@ Applies to any stack (Dockerfile + commentary):
 # DO: an immutable image. To change the app you build a new image and redeploy, never log in.
 FROM oven/bun:1-slim
 WORKDIR /app
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 COPY . .
 USER bun                       # non-root, nothing to log into
@@ -1775,7 +1780,42 @@ jobs:
           # 100 virtual users for 2 minutes; build fails if p99 exceeds 300ms
 ```
 
-### 10.8 Learn from every failure
+### 10.8 Treat data as sacred
+**Do:** Soft-delete by stamping a deleted_at and keeping the row, route every schema change through a versioned migration, and choose storage whose durability and query shape fit the data.
+**Don't:** Hard-delete a live row, or apply a destructive schema change by hand outside version control.
+
+TypeScript:
+```ts
+// DON'T: a hard delete in the handler; the row and its history vanish forever, recovery is impossible
+async function remove(id: OrderId) {
+  await db.delete(orders).where(eq(orders.id, id));
+}
+// DO: soft-delete keeps the row; reads exclude it, a retention sweep decides later, recovery is a flag flip
+async function remove(id: OrderId): Promise<Result<void, 'not_found'>> {
+  const updated = await db.update(orders)
+    .set({ deletedAt: new Date() })
+    .where(and(eq(orders.id, id), isNull(orders.deletedAt)))
+    .returning({ id: orders.id });
+  return updated.length > 0 ? { ok: true, value: undefined } : { ok: false, error: 'not_found' };
+}
+// reads stay honest: db.select().from(orders).where(isNull(orders.deletedAt))
+// every schema change ships as a numbered Drizzle migration (0008_soft_delete.ts), never a hand-run ALTER
+```
+
+Java:
+```java
+// DON'T: a real DELETE drops the row and every link to it, unrecoverable
+@DELETE public void remove(UUID id) { orderRepo.deleteById(id); }
+// DO: soft-delete keeps the row; recovery is a flag flip, a retention sweep decides later
+@DELETE public Result<Void> remove(UUID id) {
+    int n = orderRepo.update("deletedAt = ?1 where id = ?2 and deletedAt is null", Instant.now(), id);
+    return n > 0 ? new Ok<>(null) : new Err<>("not_found");
+}
+// @SQLRestriction("deleted_at IS NULL") on the entity keeps reads honest by default
+// every schema change is a versioned Flyway migration (V8__soft_delete.sql), never a hand ALTER
+```
+
+### 10.9 Learn from every failure
 **Do:** Run a blameless postmortem after every incident that ends in concrete backlog items with owners.
 **Don't:** Close the incident ticket the moment service is restored and move on.
 
@@ -2105,7 +2145,8 @@ required_status_checks:
   strict: true
   contexts: ["build", "test", "typecheck", "lint"]
 enforce_admins: true                        # admins are not exempt
-allow_self_approval: false                  # requester != sole approver
+# required_approving_review_count: 1 already means the author cannot self-merge:
+# GitHub blocks self-approval, so a different reviewer must always sign off
 restrictions:
   push: []                                  # nobody pushes to main directly
 ```

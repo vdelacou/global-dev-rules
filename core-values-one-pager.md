@@ -27,6 +27,20 @@ Pragmatism and speed to ship (serverless, free tiers, small scripts that get thi
 
 I build for people, protect their data by default, and make quality something the system enforces, not something the team remembers to do.
 
+## Values to pillars
+
+Each value is served by a subset of the [eighteen pillars](global-rules-every-new-project.md); the rest are structural enablers that serve them all.
+
+| Value | Pillars |
+|---|---|
+| 1. Rigor enforced by tooling, not willpower | 1 Consistency, 4 Proof over hope, 8 Delivery should be boring, 15 Enforce and verify |
+| 2. Protect the system and the user by default | 5 Secure by default, 6 Private by default, 7 Isolate by default |
+| 3. Efficiency and correctness at scale | 2 Simplicity by default, 9 Run as little as possible yourself, 10 Design for failure |
+| 4. Transparency and measurability | 11 Make it observable, 12 No black boxes, 16 Measure whether you are improving |
+| 5. User experience is the entire product | 17 Obsess over the whole experience, 18 Validate before you build |
+
+Pillars 3 (keep clean boundaries), 13 (clear ownership), and 14 (pave the road) are structural enablers — boundaries, ownership, and paved roads that make every value above cheaper to hold, rather than serving any single one.
+
 ---
 
 *Basis: 22 published articles (2018 to 2025) spanning engineering practice, infrastructure, data, privacy, and China-versus-West product and UX.*
