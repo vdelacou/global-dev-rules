@@ -1,6 +1,6 @@
 # Core Values: what my writing says I stand for
 
-A synthesis of 22 articles. The through-line: decide how you build before what you build with, protect the people you build for, and make quality something the system enforces rather than something you hope for.
+The through-line: decide how you build before what you build with, protect the people you build for, and make quality something the system enforces rather than something you hope for.
 
 ## The five core values
 
@@ -42,9 +42,6 @@ Each value is served by a subset of the [eighteen pillars](global-rules-every-ne
 Pillars 3 (keep clean boundaries), 13 (clear ownership), and 14 (pave the road) are structural enablers — boundaries, ownership, and paved roads that make every value above cheaper to hold, rather than serving any single one.
 
 ---
-
-*Basis: 22 published articles (2018 to 2025) spanning engineering practice, infrastructure, data, privacy, and China-versus-West product and UX.*
-
 ## See also
 
 - [The Global Rules Every New Project Should Have](global-rules-every-new-project.md) — the eighteen pillars that put these values to work.
